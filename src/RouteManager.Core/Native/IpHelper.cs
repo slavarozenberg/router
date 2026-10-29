@@ -119,4 +119,45 @@ internal static unsafe class IpHelper
 
     [DllImport("iphlpapi.dll")]
     public static extern int ConvertInterfaceGuidToLuid(in Guid interfaceGuid, out ulong interfaceLuid);
+
+    [DllImport("iphlpapi.dll")]
+    public static extern int GetBestRoute2(
+        ulong* interfaceLuid, uint interfaceIndex, SOCKADDR_INET* sourceAddress, SOCKADDR_INET* destinationAddress,
+        uint addressSortOptions, MIB_IPFORWARD_ROW2* bestRoute, SOCKADDR_INET* bestSourceAddress);
+
+    public const int ERROR_INSUFFICIENT_BUFFER = 122;
+    public const int TCP_TABLE_OWNER_PID_ALL = 5;
+
+    /// <summary>MIB_TCPROW_OWNER_PID (tcpmib.h). Ports hold a network-order ushort in their low 16 bits.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MIB_TCPROW_OWNER_PID
+    {
+        public uint State;
+        public uint LocalAddr;
+        public uint LocalPort;
+        public uint RemoteAddr;
+        public uint RemotePort;
+        public uint OwningPid;
+    }
+
+    /// <summary>MIB_TCP6ROW_OWNER_PID (tcpmib.h), 56 bytes.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MIB_TCP6ROW_OWNER_PID
+    {
+        public fixed byte LocalAddr[16];
+        public uint LocalScopeId;
+        public uint LocalPort;
+        public fixed byte RemoteAddr[16];
+        public uint RemoteScopeId;
+        public uint RemotePort;
+        public uint State;
+        public uint OwningPid;
+    }
+
+    /// <summary>Offset of MIB_TCPTABLE_OWNER_PID.table / MIB_TCP6TABLE_OWNER_PID.table: DWORD dwNumEntries.</summary>
+    public const int TcpTableRowsOffset = 4;
+
+    [DllImport("iphlpapi.dll")]
+    public static extern int GetExtendedTcpTable(
+        void* tcpTable, ref int size, [MarshalAs(UnmanagedType.Bool)] bool order, int family, int tableClass, uint reserved);
 }

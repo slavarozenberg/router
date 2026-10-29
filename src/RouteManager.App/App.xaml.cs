@@ -47,7 +47,7 @@ public partial class App : Application
         var paths = AppPaths.Default;
         _engine = new SteeringEngine(new WindowsRouteTable(), new WindowsInterfaceCatalog(), new LedgerStore(paths));
         _window = new MainWindow();
-        _viewModel = new MainViewModel(new RuleStore(paths), _engine, new WindowDialogs(_window));
+        _viewModel = new MainViewModel(new RuleStore(paths), _engine, new WindowsConnectionTable(), new WindowDialogs(_window));
         _window.DataContext = _viewModel;
         _window.Closing += OnWindowClosing;
 

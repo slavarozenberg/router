@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:RouteManager.App.ViewModels"
         xmlns:steering="clr-namespace:RouteManager.Core.Steering;assembly=RouteManager.Core"
-        Title="Route Manager" Width="1180" Height="760" MinWidth="820" MinHeight="520"
+        Title="Route Manager" Width="1180" Height="820" MinWidth="820" MinHeight="560"
         WindowStartupLocation="CenterScreen" FontSize="13" Background="White">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
@@ -94,7 +94,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" MinHeight="200" />
                 <RowDefinition Height="5" />
-                <RowDefinition Height="200" MinHeight="90" />
+                <RowDefinition Height="300" MinHeight="120" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="250" MinWidth="180" />
@@ -199,8 +199,53 @@
 
             <GridSplitter Grid.Row="1" Grid.ColumnSpan="3" HorizontalAlignment="Stretch" Background="{StaticResource BorderBrush}" />
 
-            <!-- Activity and applied routes -->
+            <!-- Connections, activity and applied routes -->
             <TabControl Grid.Row="2" Grid.ColumnSpan="3" BorderThickness="0,1,0,0" Margin="0,2,0,0">
+                <TabItem Header="Connections">
+                    <DockPanel DataContext="{Binding Connections}" IsVisibleChanged="OnConnectionsVisibleChanged">
+                        <DockPanel DockPanel.Dock="Top" Margin="8,6,8,6" LastChildFill="False">
+                            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                <TextBlock Text="Filter" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBox Width="240" Padding="4,2" VerticalContentAlignment="Center"
+                                         Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Process, PID, address, interface, gateway or rule" />
+                                <CheckBox Content="Only through rules" IsChecked="{Binding OnlySteered}"
+                                          VerticalAlignment="Center" Margin="14,0,0,0" />
+                                <CheckBox Content="Pause" IsChecked="{Binding Paused}" VerticalAlignment="Center" Margin="14,0,0,0"
+                                          ToolTip="Stop refreshing so rows hold still" />
+                            </StackPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" VerticalAlignment="Center"
+                                       Foreground="{StaticResource MutedTextBrush}" />
+                        </DockPanel>
+                        <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
+                                  HeadersVisibility="Column" GridLinesVisibility="None" BorderThickness="0,1,0,0"
+                                  BorderBrush="{StaticResource BorderBrush}" Background="White"
+                                  CanUserReorderColumns="False" SelectionMode="Extended">
+                            <!-- Row colors live in the style: DataGrid.RowBackground would override the trigger. -->
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Background" Value="White" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSteered}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource ActiveBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Process" Binding="{Binding Process}" Width="1.2*" />
+                                <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="60" />
+                                <DataGridTextColumn Header="Remote address" Binding="{Binding Remote}" Width="1.6*" />
+                                <DataGridTextColumn Header="Local address" Binding="{Binding Local}" Width="1.4*" />
+                                <DataGridTextColumn Header="State" Binding="{Binding State}" Width="90" />
+                                <DataGridTextColumn Header="Interface" Binding="{Binding Interface}" Width="1.3*" />
+                                <DataGridTextColumn Header="Gateway" Binding="{Binding Gateway}" Width="1*" />
+                                <DataGridTextColumn Header="Route" Binding="{Binding Route}" Width="1*" />
+                                <DataGridTextColumn Header="Rule" Binding="{Binding Rule}" Width="1*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </TabItem>
                 <TabItem Header="Activity">
                     <ListView ItemsSource="{Binding Log}" BorderThickness="0">
                         <ListView.View>

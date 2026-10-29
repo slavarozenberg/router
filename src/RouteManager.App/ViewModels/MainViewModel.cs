@@ -35,7 +35,7 @@ public sealed class MainViewModel : ObservableObject
     private RuleViewModel? _selectedRule;
     private string _statusText = "Loading…";
 
-    public MainViewModel(RuleStore store, SteeringEngine engine, IDialogs dialogs)
+    public MainViewModel(RuleStore store, SteeringEngine engine, IConnectionTable connections, IDialogs dialogs)
     {
         _store = store;
         _engine = engine;
@@ -43,6 +43,7 @@ public sealed class MainViewModel : ObservableObject
         _rules = store.Load();
         Groups = new ObservableCollection<GroupViewModel>(_rules.Groups.Select(NewGroupViewModel));
         _selectedGroup = Groups.FirstOrDefault();
+        Connections = new ConnectionsViewModel(connections);
 
         _engine.Applied += (_, result) => OnUi(() => OnApplied(result));
         _engine.Logged += (_, entry) => OnUi(() => AddLog(entry));
@@ -64,6 +65,7 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<GroupViewModel> Groups { get; }
     public ObservableCollection<LogEntry> Log { get; } = [];
     public ObservableCollection<AppliedRouteRow> AppliedRoutes { get; } = [];
+    public ConnectionsViewModel Connections { get; }
 
     public bool IsElevated => Elevation.IsElevated;
     public bool ShowElevationBanner => !IsElevated;
@@ -173,6 +175,8 @@ public sealed class MainViewModel : ObservableObject
         _interfacesByLuid = result.Interfaces.DistinctBy(i => i.Luid).ToDictionary(i => i.Luid);
         _lastPlan = result.Plan;
         RefreshStatuses();
+        var ruleNames = Groups.SelectMany(g => g.Rules).ToDictionary(r => r.Model.Id, r => r.DisplayName);
+        Connections.UpdateContext(_interfacesByLuid, result.Plan.Routes, ruleNames);
 
         AppliedRoutes.Clear();
         var routes = IsElevated ? result.OwnedRoutes : result.Plan.Routes.Select(r => r.Key).ToList();

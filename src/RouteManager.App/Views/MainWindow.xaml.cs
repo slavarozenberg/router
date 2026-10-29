@@ -13,6 +13,12 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
+    // The tab's content leaves the visual tree when another tab is selected or the window hides to the tray,
+    // so polling runs only while the connections are on screen.
+    // The pane's own DataContext binding may not be resolved yet when it first becomes visible, so go through the window's.
+    private void OnConnectionsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) =>
+        (DataContext as MainViewModel)?.Connections.SetActive((bool)e.NewValue);
+
     private void OnRulesDoubleClick(object sender, MouseButtonEventArgs e)
     {
         // Only a double-click on a row edits; ignore headers, scrollbars and the on/off switch.

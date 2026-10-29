@@ -14,6 +14,7 @@ It is modeled on [Rouler](https://rouler.io/) by Photon Lane, and can import Rou
 - **Master switch.** Turning *Steering* off removes all of the app's routes. Turning it on restores them.
 - **Rouler import.** Reads Rouler's `rules.json`, together with interface names from `interfaces.json`.
 - **Runs in the tray.** Closing the window keeps steering running in the background. *Exit* from the tray menu removes the app's routes.
+- **Live connections.** Shows every TCP connection: the process, the remote address, the interface and gateway it leaves through, the route that matched, and the rule behind that route, if any. Connections steered by a rule are highlighted. You can filter by any column, and pause updates.
 - **Activity log** and an **Applied routes** view showing exactly what is in the routing table.
 
 ## How it differs from Rouler
@@ -55,6 +56,8 @@ The result is a single `RouteManager.exe` in `src/RouteManager.App/bin/Release/n
 3. Enter destinations (one per line) and choose the interface for IPv4 and/or IPv6 traffic. Each interface in the list shows whether it is up and which gateway it would use ("on-link" for tunnels without a gateway).
 4. Turn on **Steering**.
 
+To check that a rule works, open the **Connections** tab under the rules list and tick **Only through rules**. The list refreshes every 2 seconds while it is on screen. It shows TCP only: Windows does not record a remote address for UDP sockets. For each connection, Windows itself is asked which route it takes (`GetBestRoute2` from the connection's local address), so the list reflects the real routing table, including routes the app did not create.
+
 When two rules claim the same destination, the rule higher in the list wins, and the other one reports the conflict. Use ▲/▼ to change the order.
 
 Routes are created in the active routing table only, so they disappear on reboot. When the app starts, it restores them from your rules.
@@ -79,6 +82,7 @@ rules + interfaces ──► RoutePlanner ──► planned routes ──► Rec
 - **`RoutePlanner`** (pure logic) expands each enabled rule into routes, using the target interface's gateway, or on-link when it has none. It also works out each rule's status.
 - **`Reconciler`** (pure logic) compares the plan with the ledger and the live table: it adds what's missing and deletes owned routes that are no longer wanted.
 - **`SteeringEngine`** runs the reconcile step through the IP Helper API (`CreateIpForwardEntry2` / `DeleteIpForwardEntry2`). It adds new routes before removing old ones, so moving a rule to another interface never leaves a gap. It re-runs on `NotifyRouteChange2` and on network address and availability events.
+- **`ConnectionTracer`** reads TCP connections with their process IDs (`GetExtendedTcpTable`), asks Windows for each connection's route, and matches that route against the plan to find the rule.
 
 The repository has three projects:
 
@@ -94,4 +98,4 @@ The repository has three projects:
 dotnet test
 ```
 
-The tests cover address parsing and range-to-CIDR splitting, rule planning, reconciliation, the engine (run against an in-memory routing table), the Rouler importer, and the layout of the native routing structures.
+The tests cover address parsing and range-to-CIDR splitting, rule planning, reconciliation, the engine (run against an in-memory routing table), the Rouler importer, connection tracing, and the layout of the native routing structures.

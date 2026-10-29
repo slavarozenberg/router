@@ -43,3 +43,17 @@ internal static class Nic
         Groups = [new RuleGroup { Name = "g", Rules = [.. rules] }],
     };
 }
+
+internal sealed class FakeConnectionTable(IEnumerable<RouteKey> routes, params TcpConnection[] connections) : IConnectionTable
+{
+    public int Lookups { get; private set; }
+
+    public IReadOnlyList<TcpConnection> GetTcpConnections() => connections;
+
+    // Longest-prefix match over the given routes, ignoring the source address.
+    public RouteKey? GetBestRoute(IPAddress source, IPAddress destination)
+    {
+        Lookups++;
+        return routes.Where(r => r.Destination.Contains(destination)).MaxBy(r => r.Destination.Length);
+    }
+}

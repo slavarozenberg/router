@@ -75,6 +75,13 @@ public class NativeLayoutTests
         Assert.Equal(28, Marshal.SizeOf<IpHelper.SOCKADDR_INET>());
     }
 
+    [Fact]
+    public void Tcp_rows_match_tcpmib_sizes()
+    {
+        Assert.Equal(24, Marshal.SizeOf<IpHelper.MIB_TCPROW_OWNER_PID>());
+        Assert.Equal(56, Marshal.SizeOf<IpHelper.MIB_TCP6ROW_OWNER_PID>());
+    }
+
     [Theory]
     [InlineData("192.168.1.10")]
     [InlineData("2001:db8::42")]
@@ -89,5 +96,14 @@ public class NativeLayoutTests
     {
         var routes = new WindowsRouteTable().GetRoutes();
         Assert.Contains(routes, r => r.Key.Destination.ToString() == "127.0.0.0/8");
+    }
+
+    [Fact]
+    public void Live_connection_table_is_readable()
+    {
+        var table = new WindowsConnectionTable();
+        var connections = table.GetTcpConnections();
+        Assert.Contains(connections, c => c.State == System.Net.NetworkInformation.TcpState.Listen);
+        Assert.Equal("127.0.0.0/8", table.GetBestRoute(IPAddress.Loopback, IPAddress.Parse("127.0.0.5"))?.Destination.ToString());
     }
 }
