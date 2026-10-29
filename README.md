@@ -4,7 +4,7 @@
 
 A Windows desktop app for sending traffic to chosen destinations through a chosen network interface, for example through a VPN tunnel, without touching anything else. You describe *what* should go *where* as rules. Route Manager turns those rules into system routes and keeps them correct when the network changes.
 
-It is modeled on [Rouler](https://rouler.io/) by Photon Lane, and can import Rouler's rules.
+It is modeled on [Rouler](https://rouler.io/), and can import Rouler's rules.
 
 ## Features
 
