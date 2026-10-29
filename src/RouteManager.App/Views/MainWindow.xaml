@@ -1,0 +1,240 @@
+<Window x:Class="RouteManager.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:RouteManager.App.ViewModels"
+        xmlns:steering="clr-namespace:RouteManager.Core.Steering;assembly=RouteManager.Core"
+        Title="Route Manager" Width="1180" Height="760" MinWidth="820" MinHeight="520"
+        WindowStartupLocation="CenterScreen" FontSize="13" Background="White">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <Style x:Key="StatusBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="Padding" Value="8,1" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Background" Value="{StaticResource OffBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static steering:RuleState.Active}">
+                    <Setter Property="Background" Value="{StaticResource ActiveBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static steering:RuleState.Partial}">
+                    <Setter Property="Background" Value="{StaticResource WarnBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static steering:RuleState.Inactive}">
+                    <Setter Property="Background" Value="{StaticResource ErrorBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="StatusBadgeText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static steering:RuleState.Active}">
+                    <Setter Property="Foreground" Value="{StaticResource ActiveTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static steering:RuleState.Partial}">
+                    <Setter Property="Foreground" Value="{StaticResource WarnTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static steering:RuleState.Inactive}">
+                    <Setter Property="Foreground" Value="{StaticResource ErrorTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="LogLevelText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Level}" Value="{x:Static steering:LogLevel.Warning}">
+                    <Setter Property="Foreground" Value="{StaticResource WarnTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Level}" Value="{x:Static steering:LogLevel.Error}">
+                    <Setter Property="Foreground" Value="{StaticResource ErrorTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- Top bar -->
+        <Border DockPanel.Dock="Top" Padding="16,10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="False">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Route Manager" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <CheckBox Style="{StaticResource SwitchStyle}" Margin="24,0,0,0" VerticalAlignment="Center"
+                              IsChecked="{Binding SteeringEnabled}"
+                              ToolTip="Master switch. Off removes every route this app created.">
+                        <TextBlock Text="Steering" FontWeight="SemiBold" />
+                    </CheckBox>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Import from Rouler…" Command="{Binding ImportRoulerCommand}" />
+                    <Button Content="Apply now" Command="{Binding ApplyNowCommand}" Margin="0"
+                            ToolTip="Re-check interfaces and re-apply all rules." />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Elevation banner -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource WarnBrush}" Padding="16,8"
+                Visibility="{Binding ShowElevationBanner, Mode=OneTime, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Restart as administrator" Margin="0"
+                        Command="{Binding RestartElevatedCommand}" />
+                <TextBlock VerticalAlignment="Center" Foreground="{StaticResource WarnTextBrush}" TextWrapping="Wrap"
+                           Text="Not running as administrator. You can edit rules, but routes won't be added or removed until the app runs elevated." />
+            </DockPanel>
+        </Border>
+
+        <!-- Status bar -->
+        <Border DockPanel.Dock="Bottom" Padding="16,5" Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource MutedTextBrush}" />
+        </Border>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" MinHeight="200" />
+                <RowDefinition Height="5" />
+                <RowDefinition Height="200" MinHeight="90" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" MinWidth="180" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Groups -->
+            <DockPanel Grid.Row="0" Grid.Column="0" Background="{StaticResource PanelBrush}">
+                <TextBlock DockPanel.Dock="Top" Text="Rule groups" Style="{StaticResource SectionHeader}" Margin="12,12,12,6" />
+                <WrapPanel DockPanel.Dock="Bottom" Margin="12,6,12,12">
+                    <Button Content="Add" Command="{Binding AddGroupCommand}" MinWidth="0" Margin="0,0,4,0" />
+                    <Button Content="Rename" Command="{Binding RenameGroupCommand}" MinWidth="0" Margin="0,0,4,0" />
+                    <Button Content="Delete" Command="{Binding DeleteGroupCommand}" MinWidth="0" Margin="0" />
+                </WrapPanel>
+                <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"
+                         BorderThickness="0" Background="Transparent" Margin="6,0"
+                         HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:GroupViewModel}">
+                            <DockPanel Margin="4,6">
+                                <CheckBox DockPanel.Dock="Right" Style="{StaticResource SwitchStyle}"
+                                          IsChecked="{Binding Enabled}" ToolTip="Turn the whole group on or off" />
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Summary}" FontSize="12" Foreground="{StaticResource MutedTextBrush}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Background="{StaticResource BorderBrush}" />
+
+            <!-- Rules -->
+            <DockPanel Grid.Row="0" Grid.Column="2" Margin="14,12,14,8">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <TextBlock Text="{Binding SelectedGroup.Name, FallbackValue='No group selected'}"
+                               Style="{StaticResource SectionHeader}" FontSize="15" VerticalAlignment="Center" Margin="0" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Add rule" Style="{StaticResource PrimaryButton}" Command="{Binding AddRuleCommand}" />
+                        <Button Content="Edit" Command="{Binding EditRuleCommand}" />
+                        <Button Content="Duplicate" Command="{Binding DuplicateRuleCommand}" />
+                        <Button Content="Delete" Command="{Binding DeleteRuleCommand}" />
+                        <Button Content="▲" MinWidth="32" Padding="6,5" Command="{Binding MoveRuleUpCommand}"
+                                ToolTip="Move up. When rules claim the same destination, the higher one wins." />
+                        <Button Content="▼" MinWidth="32" Padding="6,5" Margin="0" Command="{Binding MoveRuleDownCommand}"
+                                ToolTip="Move down" />
+                    </StackPanel>
+                </DockPanel>
+
+                <DataGrid x:Name="RulesGrid" ItemsSource="{Binding SelectedGroup.Rules}" SelectedItem="{Binding SelectedRule}"
+                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                          CanUserReorderColumns="False" CanUserSortColumns="False" SelectionMode="Single" HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{StaticResource BorderBrush}"
+                          BorderBrush="{StaticResource BorderBrush}" RowHeight="34" IsReadOnly="True"
+                          Background="White" RowBackground="White"
+                          MouseDoubleClick="OnRulesDoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="On" Width="56">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox Style="{StaticResource SwitchStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              IsChecked="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Rule" Binding="{Binding DisplayName}" Width="1.2*" />
+                        <DataGridTextColumn Header="Destinations" Binding="{Binding Destinations}" Width="2*" />
+                        <DataGridTextColumn Header="IPv4 via" Binding="{Binding Ipv4Via}" Width="1.3*" />
+                        <DataGridTextColumn Header="IPv6 via" Binding="{Binding Ipv6Via}" Width="1*" />
+                        <DataGridTemplateColumn Header="Status" Width="1.2*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource StatusBadge}" VerticalAlignment="Center"
+                                            ToolTip="{Binding StatusDetail}" ToolTipService.ShowOnDisabled="True">
+                                        <TextBlock Text="{Binding StatusText}" Style="{StaticResource StatusBadgeText}" />
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                    <DataGrid.CellStyle>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
+                            <Setter Property="ToolTip" Value="{Binding StatusDetail}" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DataGridCell">
+                                        <Border Background="{TemplateBinding Background}" Padding="6,0">
+                                            <ContentPresenter VerticalAlignment="Center" />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </DataGrid.CellStyle>
+                </DataGrid>
+            </DockPanel>
+
+            <GridSplitter Grid.Row="1" Grid.ColumnSpan="3" HorizontalAlignment="Stretch" Background="{StaticResource BorderBrush}" />
+
+            <!-- Activity and applied routes -->
+            <TabControl Grid.Row="2" Grid.ColumnSpan="3" BorderThickness="0,1,0,0" Margin="0,2,0,0">
+                <TabItem Header="Activity">
+                    <ListView ItemsSource="{Binding Log}" BorderThickness="0">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Time" Width="80" DisplayMemberBinding="{Binding Time, StringFormat=HH:mm:ss}" />
+                                <GridViewColumn Header="Level" Width="80">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Level}" Style="{StaticResource LogLevelText}" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Message" Width="900">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </TabItem>
+                <TabItem Header="Applied routes">
+                    <DataGrid ItemsSource="{Binding AppliedRoutes}" AutoGenerateColumns="False" IsReadOnly="True"
+                              HeadersVisibility="Column" GridLinesVisibility="None" BorderThickness="0">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Destination" Binding="{Binding Destination}" Width="*" />
+                            <DataGridTextColumn Header="Next hop" Binding="{Binding NextHop}" Width="*" />
+                            <DataGridTextColumn Header="Interface" Binding="{Binding Interface}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </DockPanel>
+</Window>

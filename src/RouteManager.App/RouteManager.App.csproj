@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <!-- WFAC010 is WinForms advice; WPF reads per-monitor DPI awareness from the manifest. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <AssemblyName>RouteManager</AssemblyName>
+    <RootNamespace>RouteManager.App</RootNamespace>
+    <Product>Route Manager</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms is only here for the tray icon; keep its namespace out of implicit usings to avoid WPF clashes. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RouteManager.Core\RouteManager.Core.csproj" />
+  </ItemGroup>
+
+</Project>

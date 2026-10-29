@@ -1,0 +1,47 @@
+<Window x:Class="RouteManager.App.Views.RuleEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{Binding Title}" Width="560" Height="560" MinWidth="440" MinHeight="460"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" FontSize="13" ResizeMode="CanResizeWithGrip">
+    <DockPanel Margin="18">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Save" IsDefault="True" Style="{StaticResource PrimaryButton}" Click="OnSave" x:Name="SaveButton" />
+            <Button Content="Cancel" IsCancel="True" Margin="0" />
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="Name (optional)" Margin="0,0,0,4" />
+            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Padding="4,3" x:Name="NameBox" />
+            <CheckBox Content="Enabled" IsChecked="{Binding Enabled}" Margin="0,10,0,14" />
+
+            <TextBlock Text="Send IPv4 destinations through" Margin="0,0,0,4" />
+            <ComboBox ItemsSource="{Binding Ipv4Options}" SelectedItem="{Binding SelectedIpv4}" DisplayMemberPath="Label" Padding="6,4" />
+            <TextBlock Text="Send IPv6 destinations through" Margin="0,10,0,4" />
+            <ComboBox ItemsSource="{Binding Ipv6Options}" SelectedItem="{Binding SelectedIpv6}" DisplayMemberPath="Label" Padding="6,4" />
+
+            <TextBlock Text="Destinations" Margin="0,14,0,2" />
+            <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,0,0,4" TextWrapping="Wrap"
+                       Text="One per line: an address (10.0.0.5), a range (10.80.90.0-10.80.90.255) or a subnet (10.90.0.0/22). IPv6 works the same way." />
+        </StackPanel>
+
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding ValidationText}" TextWrapping="Wrap" Margin="0,8,0,0">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="{StaticResource ActiveTextBrush}" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasWarnings}" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource WarnTextBrush}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding HasErrors}" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource ErrorTextBrush}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+
+        <TextBox Text="{Binding MatchesText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
+                 FontFamily="Cascadia Mono, Consolas" VerticalScrollBarVisibility="Auto" TextWrapping="NoWrap"
+                 HorizontalScrollBarVisibility="Auto" Padding="4" MinHeight="90" />
+    </DockPanel>
+</Window>
