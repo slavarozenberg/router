@@ -1,0 +1,29 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish", "src/RouteManager.App",
+                "-c", "Release",
+                "-r", "win-x64", "--self-contained",
+                "-p:PublishSingleFile=true", 
+                "-p:IncludeNativeLibrariesForSelfExtract=true"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run-published",
+            "type": "process",
+            "command": "src/RouteManager.App/bin/Release/net8.0-windows/win-x64/publish/RouteManager.exe",
+            "dependsOn": "publish",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
