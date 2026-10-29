@@ -1,5 +1,7 @@
 # Route Manager
 
+[![Build](https://github.com/slavarozenberg/router/actions/workflows/build.yml/badge.svg)](https://github.com/slavarozenberg/router/actions/workflows/build.yml)
+
 A Windows desktop app for sending traffic to chosen destinations through a chosen network interface, for example through a VPN tunnel, without touching anything else. You describe *what* should go *where* as rules. Route Manager turns those rules into system routes and keeps them correct when the network changes.
 
 It is modeled on [Rouler](https://rouler.io/) by Photon Lane, and can import Rouler's rules.
@@ -31,6 +33,10 @@ Rouler can also block traffic while a rule's interface is down. Routes can't do 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) to build, or the .NET 8 Desktop Runtime to run a build
 - Administrator rights to change routes
 
+## Download
+
+Get `RouteManager.exe` from the [latest release](https://github.com/slavarozenberg/router/releases/latest). It is a single self-contained file: nothing to install, no .NET runtime needed.
+
 ## Build and run
 
 ```sh
@@ -44,7 +50,7 @@ To build a self-contained executable:
 
 ```sh
 dotnet publish src/RouteManager.App -c Release -r win-x64 --self-contained \
-  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
 ```
 
 The result is a single `RouteManager.exe` in `src/RouteManager.App/bin/Release/net8.0-windows/win-x64/publish/`.
@@ -91,6 +97,19 @@ The repository has three projects:
 | `src/RouteManager.Core` | Rule model, IP math, planner, reconciler, engine, storage, Rouler importer, native interop |
 | `src/RouteManager.App` | WPF UI (MVVM), tray icon, elevation handling |
 | `tests/RouteManager.Core.Tests` | xUnit tests for the core |
+
+## Continuous integration
+
+`.github/workflows/build.yml` runs on every push to `master` and on every pull request. It runs the tests and publishes `RouteManager.exe` as a build artifact.
+
+To make a release, push a version tag:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The tag's version is stamped into the exe, and a GitHub Release is created with the exe attached and notes generated from the commits. A tag with a suffix (`v1.1.0-beta.1`) becomes a pre-release.
 
 ## Tests
 

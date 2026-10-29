@@ -1,0 +1,61 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test
+        run: dotnet test -c Release
+
+      # Tag v1.2.3 stamps version 1.2.3 into the exe; other builds keep the project default.
+      - name: Publish
+        shell: bash
+        run: |
+          version=()
+          [[ "$GITHUB_REF_TYPE" == tag ]] && version=("-p:Version=${GITHUB_REF_NAME#v}")
+          dotnet publish src/RouteManager.App -c Release -r win-x64 --self-contained \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true \
+            "${version[@]}" -o publish
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RouteManager-win-x64
+          path: publish/RouteManager.exe
+          if-no-files-found: error
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: RouteManager-win-x64
+
+      # Tags with a suffix (v1.2.0-beta.1) become pre-releases.
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease="--prerelease"
+          gh release create "$GITHUB_REF_NAME" RouteManager.exe --repo "$GITHUB_REPOSITORY" \
+            --title "Route Manager $GITHUB_REF_NAME" --generate-notes $prerelease
