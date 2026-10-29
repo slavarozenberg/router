@@ -30,7 +30,7 @@ Rouler can also block traffic while a rule's interface is down. Routes can't do 
 ## Requirements
 
 - Windows 10 or 11 (x64)
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) to build, or the .NET 8 Desktop Runtime to run a build
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) to build, or the .NET 10 Desktop Runtime to run a build
 - Administrator rights to change routes
 
 ## Download
@@ -44,7 +44,7 @@ dotnet build
 dotnet run --project src/RouteManager.App
 ```
 
-The app starts **unelevated** and read-only. You can create and edit rules, and the statuses show what *would* be applied ("Planned"). Click **Restart as administrator** in the banner to apply rules for real. Alternatively, run `src/RouteManager.App/bin/Debug/net8.0-windows/RouteManager.exe` as administrator.
+The app starts **unelevated** and read-only. You can create and edit rules, and the statuses show what *would* be applied ("Planned"). Click **Restart as administrator** in the banner to apply rules for real. Alternatively, run `src/RouteManager.App/bin/Debug/net10.0-windows/RouteManager.exe` as administrator.
 
 To build a self-contained executable:
 
@@ -53,7 +53,7 @@ dotnet publish src/RouteManager.App -c Release -r win-x64 --self-contained \
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
 ```
 
-The result is a single `RouteManager.exe` in `src/RouteManager.App/bin/Release/net8.0-windows/win-x64/publish/`.
+The result is a single `RouteManager.exe` in `src/RouteManager.App/bin/Release/net10.0-windows/win-x64/publish/`.
 
 ## Usage
 

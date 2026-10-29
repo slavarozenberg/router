@@ -10,14 +10,16 @@
                 "-c", "Release",
                 "-r", "win-x64", "--self-contained",
                 "-p:PublishSingleFile=true", 
-                "-p:IncludeNativeLibrariesForSelfExtract=true"
+                "-p:EnableCompressionInSingleFile=true",
+                "-p:IncludeNativeLibrariesForSelfExtract=true",
+                "-o", "C:\\Programs\\RouteManager"
             ],
             "problemMatcher": "$msCompile"
         },
         {
             "label": "run-published",
             "type": "process",
-            "command": "src/RouteManager.App/bin/Release/net8.0-windows/win-x64/publish/RouteManager.exe",
+            "command": "C:\\Programs\\RouteManager\\RouteManager.exe",
             "dependsOn": "publish",
             "problemMatcher": [],
             "group": {
