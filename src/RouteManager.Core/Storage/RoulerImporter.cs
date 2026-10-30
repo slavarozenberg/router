@@ -3,8 +3,6 @@ using RouteManager.Core.Model;
 
 namespace RouteManager.Core.Storage;
 
-public sealed record RoulerImport(IReadOnlyList<RuleGroup> Groups, IReadOnlyList<string> Warnings);
-
 /// <summary>
 /// Imports Rouler's rules.json (format version 3) and interface names from its interfaces.json.
 /// Rouler can scope a group to one app via its WFP driver; routes can't, so app-scoped groups
@@ -15,14 +13,14 @@ public static class RoulerImporter
     public static string DefaultDirectory { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Rouler");
 
-    public static RoulerImport ImportFile(string rulesPath)
+    public static RuleImport ImportFile(string rulesPath)
     {
         var interfacesPath = Path.Combine(Path.GetDirectoryName(rulesPath)!, "interfaces.json");
         var interfacesJson = File.Exists(interfacesPath) ? File.ReadAllText(interfacesPath) : null;
         return Import(File.ReadAllText(rulesPath), interfacesJson);
     }
 
-    public static RoulerImport Import(string rulesJson, string? interfacesJson)
+    public static RuleImport Import(string rulesJson, string? interfacesJson)
     {
         var names = ReadInterfaceNames(interfacesJson);
         var warnings = new List<string>();
@@ -56,7 +54,7 @@ public static class RoulerImporter
             groups.Add(group);
         }
 
-        return new RoulerImport(groups, warnings);
+        return new RuleImport(groups, warnings);
     }
 
     private static Rule? ImportRule(JsonElement source, IReadOnlyDictionary<ulong, string> names, string groupName, List<string> warnings)

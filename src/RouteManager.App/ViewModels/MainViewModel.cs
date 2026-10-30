@@ -10,6 +10,12 @@ using RouteManager.Core.Storage;
 
 namespace RouteManager.App.ViewModels;
 
+public enum ImportMode
+{
+    Add,
+    Replace,
+}
+
 /// <summary>Window-specific interactions the view model asks the view to perform.</summary>
 public interface IDialogs
 {
@@ -17,7 +23,9 @@ public interface IDialogs
     string? PromptText(string title, string label, string initial);
     bool Confirm(string message);
     void Show(string message, bool isWarning = false);
-    string? PickRoulerRulesFile();
+    string? PickImportFile();
+    string? PickExportFile(string suggestedName);
+    ImportMode? AskImportMode(string message);
 }
 
 public sealed class MainViewModel : ObservableObject
@@ -58,7 +66,8 @@ public sealed class MainViewModel : ObservableObject
         MoveRuleUpCommand = new RelayCommand(() => MoveRule(-1), () => CanMoveRule(-1));
         MoveRuleDownCommand = new RelayCommand(() => MoveRule(+1), () => CanMoveRule(+1));
         ApplyNowCommand = new RelayCommand(() => Apply("manual apply"));
-        ImportRoulerCommand = new RelayCommand(ImportRouler);
+        ImportCommand = new RelayCommand(Import);
+        ExportCommand = new RelayCommand(Export, () => _rules.Groups.Count > 0);
         RestartElevatedCommand = new RelayCommand(RestartElevated, () => !IsElevated);
     }
 
@@ -80,7 +89,8 @@ public sealed class MainViewModel : ObservableObject
     public ICommand MoveRuleUpCommand { get; }
     public ICommand MoveRuleDownCommand { get; }
     public ICommand ApplyNowCommand { get; }
-    public ICommand ImportRoulerCommand { get; }
+    public ICommand ImportCommand { get; }
+    public ICommand ExportCommand { get; }
     public ICommand RestartElevatedCommand { get; }
 
     public bool SteeringEnabled
@@ -332,16 +342,34 @@ public sealed class MainViewModel : ObservableObject
         Commit();
     }
 
-    private void ImportRouler()
+    private void Export()
     {
-        var path = _dialogs.PickRoulerRulesFile();
+        var path = _dialogs.PickExportFile($"route-manager-rules-{DateTime.Now:yyyy-MM-dd}.json");
+        if (path is null)
+            return;
+        try
+        {
+            RuleTransfer.Export(path, _rules.Groups);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _dialogs.Show($"Could not export to \"{path}\":\n{ex.Message}", isWarning: true);
+            return;
+        }
+        var ruleCount = _rules.Groups.Sum(g => g.Rules.Count);
+        AddLog(new LogEntry(DateTime.Now, LogLevel.Info, $"Exported {_rules.Groups.Count} group(s) with {ruleCount} rule(s) to {path}."));
+    }
+
+    private void Import()
+    {
+        var path = _dialogs.PickImportFile();
         if (path is null)
             return;
 
-        RoulerImport import;
+        RuleImport import;
         try
         {
-            import = RoulerImporter.ImportFile(path);
+            import = RuleTransfer.ImportFile(path, _interfaces);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException)
         {
@@ -349,19 +377,36 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
+        var ruleCount = import.Groups.Sum(g => g.Rules.Count);
+        if (import.Groups.Count == 0)
+        {
+            _dialogs.Show($"\"{path}\" contains no rule groups.", isWarning: true);
+            return;
+        }
+        var mode = _dialogs.AskImportMode(
+            $"The file has {import.Groups.Count} group(s) with {ruleCount} rule(s).\n\n" +
+            "Yes: replace all current groups and rules (their routes are removed).\n" +
+            "No: add the imported groups to the current ones.");
+        if (mode is null)
+            return;
+
+        if (mode == ImportMode.Replace)
+        {
+            _rules.Groups.Clear();
+            Groups.Clear();
+        }
         foreach (var group in import.Groups)
         {
             _rules.Groups.Add(group);
             Groups.Add(NewGroupViewModel(group));
         }
-        SelectedGroup = Groups.LastOrDefault();
+        SelectedGroup = mode == ImportMode.Replace ? Groups.FirstOrDefault() : Groups.LastOrDefault();
         Commit();
 
-        var ruleCount = import.Groups.Sum(g => g.Rules.Count);
-        var message = $"Imported {import.Groups.Count} group(s) with {ruleCount} rule(s).";
+        var verb = mode == ImportMode.Replace ? "Replaced the rules with" : "Imported";
+        AddLog(new LogEntry(DateTime.Now, LogLevel.Info, $"{verb} {import.Groups.Count} group(s) with {ruleCount} rule(s) from {path}."));
         if (import.Warnings.Count > 0)
-            message += "\n\n" + string.Join("\n\n", import.Warnings);
-        _dialogs.Show(message, isWarning: import.Warnings.Count > 0);
+            _dialogs.Show(string.Join("\n\n", import.Warnings), isWarning: true);
     }
 
     private void RestartElevated()

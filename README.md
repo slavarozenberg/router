@@ -14,7 +14,7 @@ It is modeled on [Rouler](https://rouler.io/), and can import Rouler's rules.
 - **Follows the network.** When routes, addresses or connectivity change, rules are re-applied after a short debounce. When a VPN comes up, its routes appear. If the gateway changes, the routes move to the new one.
 - **Touches only its own routes.** Every route the app creates is recorded, and only those are ever removed. Routes created by Windows, VPN clients or you are never modified.
 - **Master switch.** Turning *Steering* off removes all of the app's routes. Turning it on restores them.
-- **Rouler import.** Reads Rouler's `rules.json`, together with interface names from `interfaces.json`.
+- **Export and import.** *Export…* saves all groups and rules to a JSON file. *Import…* reads such a file, a `rules.json` backup, or Rouler's `rules.json` (with interface names from its `interfaces.json`). You choose whether to replace the current rules or add to them. When a file comes from another computer, its interfaces are matched by name.
 - **Runs in the tray.** Closing the window keeps steering running in the background. *Exit* from the tray menu removes the app's routes.
 - **Live connections.** Shows every TCP connection: the process, the remote address, the interface and gateway it leaves through, the route that matched, and the rule behind that route, if any. Connections steered by a rule are highlighted. You can filter by any column, and pause updates.
 - **Activity log** and an **Applied routes** view showing exactly what is in the routing table.
@@ -57,7 +57,7 @@ The result is a single `RouteManager.exe` in `src/RouteManager.App/bin/Release/n
 
 ## Usage
 
-1. Optionally, click **Import from Rouler…** and pick `C:\ProgramData\Rouler\rules.json`.
+1. Optionally, click **Import…** and pick an exported file, or Rouler's `C:\ProgramData\Rouler\rules.json`.
 2. Select a group and click **Add rule**.
 3. Enter destinations (one per line) and choose the interface for IPv4 and/or IPv6 traffic. Each interface in the list shows whether it is up and which gateway it would use ("on-link" for tunnels without a gateway).
 4. Turn on **Steering**.
@@ -94,7 +94,7 @@ The repository has three projects:
 
 | Path | Contents |
 |---|---|
-| `src/RouteManager.Core` | Rule model, IP math, planner, reconciler, engine, storage, Rouler importer, native interop |
+| `src/RouteManager.Core` | Rule model, IP math, planner, reconciler, engine, storage, export/import, Rouler importer, native interop |
 | `src/RouteManager.App` | WPF UI (MVVM), tray icon, elevation handling |
 | `tests/RouteManager.Core.Tests` | xUnit tests for the core |
 
@@ -117,4 +117,4 @@ The tag's version is stamped into the exe, and a GitHub Release is created with 
 dotnet test
 ```
 
-The tests cover address parsing and range-to-CIDR splitting, rule planning, reconciliation, the engine (run against an in-memory routing table), the Rouler importer, connection tracing, and the layout of the native routing structures.
+The tests cover address parsing and range-to-CIDR splitting, rule planning, reconciliation, the engine (run against an in-memory routing table), export/import, the Rouler importer, connection tracing, and the layout of the native routing structures.
