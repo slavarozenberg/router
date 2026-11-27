@@ -71,9 +71,8 @@ public sealed record AddressMatch
         var dash = trimmed.IndexOf('-');
         if (dash > 0)
         {
-            if (IPAddress.TryParse(trimmed[..dash].Trim(), out var start)
-                && IPAddress.TryParse(trimmed[(dash + 1)..].Trim(), out var end)
-                && IpPrefix.IsSupported(start)
+            if (IpMath.TryParseAddress(trimmed[..dash], out var start)
+                && IpMath.TryParseAddress(trimmed[(dash + 1)..], out var end)
                 && start.AddressFamily == end.AddressFamily)
             {
                 if (IpMath.ToInteger(start) > IpMath.ToInteger(end))
@@ -88,7 +87,7 @@ public sealed record AddressMatch
             return false;
         }
 
-        if (IPAddress.TryParse(trimmed, out var address) && IpPrefix.IsSupported(address))
+        if (IpMath.TryParseAddress(trimmed, out var address))
         {
             match = ForAddress(address);
             return true;

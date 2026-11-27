@@ -32,6 +32,87 @@ public class RoutePlannerTests
         Assert.Equal(Nic.LanLuid, route.Key.InterfaceLuid);
     }
 
+    private static InterfaceInfo Tap() =>
+        new(Nic.VpnLuid, "OpenVPN TAP", "tap-windows6", true, false,
+            [IPAddress.Parse("10.80.90.45")], [], [IpPrefix.Parse("10.80.90.0/24")]);
+
+    [Fact]
+    public void Rule_gateway_overrides_on_link()
+    {
+        var rule = new Rule { Matches = ["172.20.3.0/24"], Ipv4Interface = Nic.Ref(Tap()), Ipv4Gateway = " 10.80.90.1 " };
+
+        var plan = RoutePlanner.Plan(Nic.RuleSet(rule), [Tap()]);
+
+        Assert.Equal(RuleState.Active, plan.RuleStatuses[rule.Id].State);
+        Assert.Equal(IPAddress.Parse("10.80.90.1"), plan.Routes.Single().Key.NextHop);
+    }
+
+    [Fact]
+    public void Rule_gateway_overrides_interface_gateway()
+    {
+        var rule = new Rule { Matches = ["172.20.2.0/24"], Ipv4Interface = Nic.Ref(Nic.Lan()), Ipv4Gateway = "172.19.4.2" };
+
+        var route = RoutePlanner.Plan(Nic.RuleSet(rule), [Nic.Lan()]).Routes.Single();
+
+        Assert.Equal(IPAddress.Parse("172.19.4.2"), route.Key.NextHop);
+    }
+
+    [Fact]
+    public void Gateway_outside_interface_subnet_makes_rule_inactive()
+    {
+        var rule = new Rule { Matches = ["172.20.3.0/24"], Ipv4Interface = Nic.Ref(Tap()), Ipv4Gateway = "10.8.0.1" };
+
+        var plan = RoutePlanner.Plan(Nic.RuleSet(rule), [Tap()]);
+
+        Assert.Empty(plan.Routes);
+        Assert.Equal(RuleState.Inactive, plan.RuleStatuses[rule.Id].State);
+        Assert.Contains("not in a subnet of", plan.RuleStatuses[rule.Id].Messages.Single());
+    }
+
+    [Fact]
+    public void Gateway_is_not_checked_when_subnets_are_unknown()
+    {
+        var rule = new Rule { Matches = ["172.20.3.0/24"], Ipv4Interface = Nic.Ref(Nic.Vpn()), Ipv4Gateway = "10.8.0.1" };
+
+        var route = RoutePlanner.Plan(Nic.RuleSet(rule), [Nic.Vpn()]).Routes.Single();
+
+        Assert.Equal(IPAddress.Parse("10.8.0.1"), route.Key.NextHop);
+    }
+
+    [Theory]
+    [InlineData("10.80.90", "is not an IPv4 gateway")]
+    [InlineData("2001:db8::1", "is not an IPv4 gateway")]
+    [InlineData("0.0.0.0", "can't be a gateway")]
+    [InlineData("127.0.0.1", "can't be a gateway")]
+    public void Bad_gateway_leaves_family_unrouted(string gateway, string message)
+    {
+        var rule = new Rule { Matches = ["172.20.3.0/24"], Ipv4Interface = Nic.Ref(Tap()), Ipv4Gateway = gateway };
+
+        var status = RoutePlanner.Plan(Nic.RuleSet(rule), [Tap()]).RuleStatuses[rule.Id];
+
+        Assert.Equal(RuleState.Inactive, status.State);
+        Assert.Contains(message, status.Messages.Single());
+    }
+
+    [Fact]
+    public void Blank_gateway_is_automatic()
+    {
+        var rule = new Rule { Matches = ["172.20.3.0/24"], Ipv4Interface = Nic.Ref(Tap()), Ipv4Gateway = "  " };
+
+        Assert.True(RoutePlanner.Plan(Nic.RuleSet(rule), [Tap()]).Routes.Single().Key.IsOnLink);
+    }
+
+    [Fact]
+    public void Clone_keeps_gateways()
+    {
+        var rule = new Rule { Ipv4Gateway = "10.80.90.1", Ipv6Gateway = "fe80::1" };
+
+        var copy = rule.Clone();
+
+        Assert.Equal("10.80.90.1", copy.Ipv4Gateway);
+        Assert.Equal("fe80::1", copy.Ipv6Gateway);
+    }
+
     [Fact]
     public void Down_interface_makes_rule_inactive()
     {
@@ -164,6 +245,20 @@ public sealed class SteeringEngineTests : IDisposable
 
         var route = Assert.Single(_table.Routes);
         Assert.Equal(Nic.LanLuid, route.InterfaceLuid);
+    }
+
+    [Fact]
+    public void Setting_a_gateway_replaces_the_on_link_route()
+    {
+        var rule = new Rule { Matches = ["172.20.3.0/24"], Ipv4Interface = Nic.Ref(Nic.Vpn()) };
+        var rules = Nic.RuleSet(rule);
+        _engine.Apply(rules, canWrite: true, "test");
+
+        rule.Ipv4Gateway = "10.8.0.1";
+        _engine.Apply(rules, canWrite: true, "test");
+
+        var route = Assert.Single(_table.Routes);
+        Assert.Equal(IPAddress.Parse("10.8.0.1"), route.NextHop);
     }
 
     [Fact]

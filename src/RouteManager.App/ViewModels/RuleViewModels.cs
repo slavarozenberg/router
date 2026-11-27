@@ -78,8 +78,8 @@ public sealed class RuleViewModel : ObservableObject
 
     public string DisplayName => RoutePlanner.DisplayName(Model);
     public string Destinations => string.Join(", ", Model.Matches);
-    public string Ipv4Via => Describe(Model.Ipv4Interface);
-    public string Ipv6Via => Describe(Model.Ipv6Interface);
+    public string Ipv4Via => Describe(Model.Ipv4Interface, Model.Ipv4Gateway);
+    public string Ipv6Via => Describe(Model.Ipv6Interface, Model.Ipv6Gateway);
 
     public RuleState State => _status.State;
 
@@ -107,13 +107,14 @@ public sealed class RuleViewModel : ObservableObject
     /// <summary>Re-reads every displayed property after the model was edited.</summary>
     public void Refresh() => OnPropertyChanged(null);
 
-    private string Describe(InterfaceRef? target)
+    private string Describe(InterfaceRef? target, string? gateway)
     {
         if (target is null)
             return "—";
+        var via = string.IsNullOrWhiteSpace(gateway) ? "" : $" via {gateway.Trim()}";
         if (!_interfaces.TryGetValue(target.Luid, out var nic))
-            return $"{target.Name} (not present)";
-        return nic.IsUp ? nic.Name : $"{nic.Name} (down)";
+            return $"{target.Name}{via} (not present)";
+        return nic.IsUp ? $"{nic.Name}{via}" : $"{nic.Name}{via} (down)";
     }
 }
 

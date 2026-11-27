@@ -5,6 +5,49 @@ using RouteManager.Core.Net;
 
 namespace RouteManager.Core.Tests;
 
+public class AddressParsingTests
+{
+    [Theory]
+    [InlineData("10.80.90.1", "10.80.90.1")]
+    [InlineData(" 172.20.3.3 ", "172.20.3.3")]
+    [InlineData("010.080.090.001", "10.80.90.1")] // leading zeros are decimal, not octal
+    [InlineData("0.0.0.0", "0.0.0.0")]
+    [InlineData("255.255.255.255", "255.255.255.255")]
+    [InlineData("2001:db8::1", "2001:db8::1")]
+    [InlineData("::ffff:10.80.90.1", "::ffff:10.80.90.1")]
+    public void Accepts_full_forms(string text, string expected)
+    {
+        Assert.True(IpMath.TryParseAddress(text, out var address));
+        Assert.Equal(expected, address.ToString());
+    }
+
+    [Theory]
+    [InlineData("10.80.90")]       // IPAddress.TryParse: 10.80.0.90
+    [InlineData("10.80")]          // 10.0.0.80
+    [InlineData("167772161")]      // 10.0.0.1
+    [InlineData("0x0a.0.0.1")]     // hex
+    [InlineData("10.80.90.256")]
+    [InlineData("10.80.90.1.5")]
+    [InlineData("10.80..1")]
+    [InlineData("10.80.90.-1")]
+    [InlineData("10.80.90.+1")]
+    [InlineData("10.80.90.1000")]
+    [InlineData("１０.80.90.1")]   // non-ASCII digits
+    [InlineData("")]
+    [InlineData("example.com")]
+    public void Rejects_short_hex_and_malformed_forms(string text) =>
+        Assert.False(IpMath.TryParseAddress(text, out _));
+
+    [Theory]
+    [InlineData("10.80.90")]
+    [InlineData("10.80.90-10.80.91")]
+    [InlineData("10.90/22")]
+    [InlineData("10.0.0.0/255.255")]
+    [InlineData("10.0.0.0/+22")]
+    public void Destinations_reject_short_forms(string text) =>
+        Assert.False(AddressMatch.TryParse(text, out _, out _));
+}
+
 public class IpPrefixTests
 {
     [Theory]

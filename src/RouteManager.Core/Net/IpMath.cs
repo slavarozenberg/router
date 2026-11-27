@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 
@@ -6,6 +7,41 @@ namespace RouteManager.Core.Net;
 /// <summary>Converts IPv4/IPv6 addresses to and from 128-bit integers for prefix arithmetic.</summary>
 public static class IpMath
 {
+    /// <summary>
+    /// Parses an address the way a person writes it. IPv4 must be four decimal parts (0-255 each).
+    /// <see cref="IPAddress.TryParse(string?, out IPAddress?)"/> also accepts legacy inet_aton forms, which silently
+    /// change the meaning: "10.80.90" is 10.80.0.90, "167772161" is 10.0.0.1, "010.0.0.1" (octal) is 8.0.0.1
+    /// and "0x0a.0.0.1" is 10.0.0.1. Here short and hex forms are rejected, and a leading zero is decimal.
+    /// IPv6 (anything containing ':') goes to the framework parser.
+    /// </summary>
+    public static bool TryParseAddress(string? text, [NotNullWhen(true)] out IPAddress? address)
+    {
+        address = null;
+        var trimmed = text?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+            return false;
+
+        if (trimmed.Contains(':'))
+            return IPAddress.TryParse(trimmed, out address) && address.AddressFamily == AddressFamily.InterNetworkV6;
+
+        var parts = trimmed.Split('.');
+        if (parts.Length != 4)
+            return false;
+        var bytes = new byte[4];
+        for (var i = 0; i < 4; i++)
+        {
+            var part = parts[i];
+            if (part.Length is 0 or > 3 || !part.All(char.IsAsciiDigit))
+                return false;
+            var value = int.Parse(part);
+            if (value > 255)
+                return false;
+            bytes[i] = (byte)value;
+        }
+        address = new IPAddress(bytes);
+        return true;
+    }
+
     public static int BitWidth(AddressFamily family) => family switch
     {
         AddressFamily.InterNetwork => 32,

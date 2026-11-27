@@ -33,14 +33,16 @@ public readonly record struct IpPrefix
             return false;
 
         var parts = text.Trim().Split('/');
-        if (parts.Length != 2 || !IPAddress.TryParse(parts[0], out var address) || !IsSupported(address))
+        if (parts.Length != 2 || !IpMath.TryParseAddress(parts[0], out var address))
             return false;
 
         int length;
-        if (int.TryParse(parts[1], out var parsed))
-            length = parsed;
+        var lengthText = parts[1].Trim();
+        // Digits only: int.TryParse would also take a sign ("+22") or inner whitespace.
+        if (lengthText.Length is > 0 and <= 3 && lengthText.All(char.IsAsciiDigit))
+            length = int.Parse(lengthText);
         else if (address.AddressFamily == AddressFamily.InterNetwork
-                 && IPAddress.TryParse(parts[1], out var mask)
+                 && IpMath.TryParseAddress(parts[1], out var mask)
                  && IpMath.PrefixLengthFromMask(mask) is { } fromMask)
             length = fromMask;
         else

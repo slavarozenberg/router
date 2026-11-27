@@ -41,6 +41,16 @@ public sealed class Rule
     public InterfaceRef? Ipv4Interface { get; set; }
     public InterfaceRef? Ipv6Interface { get; set; }
 
+    /// <summary>
+    /// Next hop for IPv4 routes, e.g. "10.80.90.1". Null means automatic: the interface's gateway, or on-link when it has none.
+    /// Needed for TAP adapters (OpenVPN tap-windows6), which emulate Ethernet: an on-link route makes Windows ARP for the
+    /// destination itself, and only addresses inside the tunnel subnet answer.
+    /// </summary>
+    public string? Ipv4Gateway { get; set; }
+
+    /// <summary>Next hop for IPv6 routes. Null means automatic, as for <see cref="Ipv4Gateway"/>.</summary>
+    public string? Ipv6Gateway { get; set; }
+
     public Rule Clone() => new()
     {
         Id = Id,
@@ -49,6 +59,8 @@ public sealed class Rule
         Matches = [.. Matches],
         Ipv4Interface = Ipv4Interface,
         Ipv6Interface = Ipv6Interface,
+        Ipv4Gateway = Ipv4Gateway,
+        Ipv6Gateway = Ipv6Gateway,
     };
 }
 

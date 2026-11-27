@@ -13,8 +13,19 @@ public sealed record InterfaceInfo(
     bool IsUp,
     bool IsLoopback,
     IReadOnlyList<IPAddress> Addresses,
-    IReadOnlyList<IPAddress> Gateways)
+    IReadOnlyList<IPAddress> Gateways,
+    IReadOnlyList<IpPrefix>? Subnets = null)
 {
+    /// <summary>
+    /// The interface has a subnet of <paramref name="address"/>'s family that contains it, so it can be a next hop.
+    /// True when subnets are unknown, so a missing snapshot never blocks a route.
+    /// </summary>
+    public bool IsOnSubnet(IPAddress address)
+    {
+        var subnets = Subnets?.Where(s => s.Family == address.AddressFamily).ToList();
+        return subnets is null or { Count: 0 } || subnets.Any(s => s.Contains(address));
+    }
+
     /// <summary>Has a routable source address: link-local (fe80::/10) and APIPA (169.254/16) don't count.</summary>
     public bool HasAddress(AddressFamily family) =>
         Addresses.Any(a => a.AddressFamily == family && !a.IsIPv6LinkLocal && !Apipa.Contains(a));
@@ -52,7 +63,13 @@ public sealed class WindowsInterfaceCatalog : IInterfaceCatalog
                 nic.OperationalStatus == OperationalStatus.Up,
                 nic.NetworkInterfaceType == NetworkInterfaceType.Loopback,
                 properties.UnicastAddresses.Select(a => a.Address).ToList(),
-                properties.GatewayAddresses.Select(g => g.Address).ToList()));
+                properties.GatewayAddresses.Select(g => g.Address).ToList(),
+                properties.UnicastAddresses
+                    .Where(a => IpPrefix.IsSupported(a.Address) && a.PrefixLength >= 0
+                                && a.PrefixLength <= IpMath.BitWidth(a.Address.AddressFamily))
+                    .Select(a => new IpPrefix(a.Address, a.PrefixLength))
+                    .Distinct()
+                    .ToList()));
         }
         return result.OrderBy(i => i.IsLoopback).ThenByDescending(i => i.IsUp).ThenBy(i => i.Name).ToList();
     }

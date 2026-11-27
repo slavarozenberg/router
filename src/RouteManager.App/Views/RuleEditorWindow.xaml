@@ -1,7 +1,7 @@
 <Window x:Class="RouteManager.App.Views.RuleEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="{Binding Title}" Width="560" Height="560" MinWidth="440" MinHeight="460"
+        Title="{Binding Title}" Width="620" Height="560" MinWidth="500" MinHeight="460"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False" FontSize="13" ResizeMode="CanResizeWithGrip">
     <DockPanel Margin="18">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
@@ -14,10 +14,35 @@
             <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Padding="4,3" x:Name="NameBox" />
             <CheckBox Content="Enabled" IsChecked="{Binding Enabled}" Margin="0,10,0,14" />
 
-            <TextBlock Text="Send IPv4 destinations through" Margin="0,0,0,4" />
-            <ComboBox ItemsSource="{Binding Ipv4Options}" SelectedItem="{Binding SelectedIpv4}" DisplayMemberPath="Label" Padding="6,4" />
-            <TextBlock Text="Send IPv6 destinations through" Margin="0,10,0,4" />
-            <ComboBox ItemsSource="{Binding Ipv6Options}" SelectedItem="{Binding SelectedIpv6}" DisplayMemberPath="Label" Padding="6,4" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="10" />
+                    <ColumnDefinition Width="150" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Send IPv4 destinations through" Margin="0,0,0,4" />
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="IPv4 gateway (optional)" Margin="0,0,0,4" />
+                <ComboBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Ipv4Options}" SelectedItem="{Binding SelectedIpv4}"
+                          DisplayMemberPath="Label" Padding="6,4" />
+                <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding Ipv4Gateway, UpdateSourceTrigger=PropertyChanged}"
+                         FontFamily="Cascadia Mono, Consolas" Padding="4,3" VerticalContentAlignment="Center"
+                         ToolTip="Next hop for these routes, e.g. 10.80.90.1. Leave empty to use the interface's gateway, or on-link when it has none. Set it for OpenVPN TAP adapters: on-link routes don't work through them." />
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Send IPv6 destinations through" Margin="0,10,0,4" />
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="IPv6 gateway (optional)" Margin="0,10,0,4" />
+                <ComboBox Grid.Row="3" Grid.Column="0" ItemsSource="{Binding Ipv6Options}" SelectedItem="{Binding SelectedIpv6}"
+                          DisplayMemberPath="Label" Padding="6,4" />
+                <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding Ipv6Gateway, UpdateSourceTrigger=PropertyChanged}"
+                         FontFamily="Cascadia Mono, Consolas" Padding="4,3" VerticalContentAlignment="Center"
+                         ToolTip="Next hop for these routes. Leave empty to use the interface's gateway, or on-link when it has none." />
+            </Grid>
 
             <TextBlock Text="Destinations" Margin="0,14,0,2" />
             <TextBlock Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,0,0,4" TextWrapping="Wrap"

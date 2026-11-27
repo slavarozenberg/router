@@ -59,7 +59,7 @@ The result is a single `RouteManager.exe` in `src/RouteManager.App/bin/Release/n
 
 1. Optionally, click **Import…** and pick an exported file, or Rouler's `C:\ProgramData\Rouler\rules.json`.
 2. Select a group and click **Add rule**.
-3. Enter destinations (one per line) and choose the interface for IPv4 and/or IPv6 traffic. Each interface in the list shows whether it is up and which gateway it would use ("on-link" for tunnels without a gateway).
+3. Enter destinations (one per line) and choose the interface for IPv4 and/or IPv6 traffic. Each interface in the list shows whether it is up and which gateway it would use ("on-link" for tunnels without a gateway). To use a different next hop, enter it in **gateway (optional)**. An OpenVPN TAP adapter (tap-windows6) needs this, for example `10.80.90.1`: it emulates Ethernet, so on-link routes to addresses outside the tunnel subnet don't work through it. DCO and Wintun adapters work on-link.
 4. Turn on **Steering**.
 
 To check that a rule works, open the **Connections** tab under the rules list and tick **Only through rules**. The list refreshes every 2 seconds while it is on screen. It shows TCP only: Windows does not record a remote address for UDP sockets. For each connection, Windows itself is asked which route it takes (`GetBestRoute2` from the connection's local address), so the list reflects the real routing table, including routes the app did not create.
@@ -85,7 +85,7 @@ rules + interfaces ──► RoutePlanner ──► planned routes ──► Rec
                               ledger (routes we own) + live routing table
 ```
 
-- **`RoutePlanner`** (pure logic) expands each enabled rule into routes, using the target interface's gateway, or on-link when it has none. It also works out each rule's status.
+- **`RoutePlanner`** (pure logic) expands each enabled rule into routes, using the rule's gateway when it has one, otherwise the target interface's gateway, or on-link when it has none. It also works out each rule's status.
 - **`Reconciler`** (pure logic) compares the plan with the ledger and the live table: it adds what's missing and deletes owned routes that are no longer wanted.
 - **`SteeringEngine`** runs the reconcile step through the IP Helper API (`CreateIpForwardEntry2` / `DeleteIpForwardEntry2`). It adds new routes before removing old ones, so moving a rule to another interface never leaves a gap. It re-runs on `NotifyRouteChange2` and on network address and availability events.
 - **`ConnectionTracer`** reads TCP connections with their process IDs (`GetExtendedTcpTable`), asks Windows for each connection's route, and matches that route against the plan to find the rule.

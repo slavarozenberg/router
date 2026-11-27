@@ -91,7 +91,20 @@ public static class RoutePlanner
                         continue;
                     }
 
-                    var nextHop = nic.GatewayFor(family)
+                    var gatewayText = family == AddressFamily.InterNetwork ? rule.Ipv4Gateway : rule.Ipv6Gateway;
+                    if (!TryParseGateway(gatewayText, family, out var gateway, out var gatewayError))
+                    {
+                        messages.Add(gatewayError!);
+                        continue;
+                    }
+                    if (gateway is not null && !nic.IsOnSubnet(gateway))
+                    {
+                        messages.Add($"Gateway {gateway} is not in a subnet of \"{nic.Name}\".");
+                        continue;
+                    }
+
+                    var nextHop = gateway
+                        ?? nic.GatewayFor(family)
                         ?? (family == AddressFamily.InterNetwork ? IPAddress.Any : IPAddress.IPv6Any);
                     foreach (var prefix in familyPrefixes)
                     {
@@ -122,6 +135,34 @@ public static class RoutePlanner
         }
 
         return new RoutePlan(routes, statuses);
+    }
+
+    /// <summary>
+    /// Reads a rule's gateway for <paramref name="family"/>. Blank text is valid and gives null (automatic next hop).
+    /// </summary>
+    public static bool TryParseGateway(string? text, AddressFamily family, out IPAddress? gateway, out string? error)
+    {
+        gateway = null;
+        error = null;
+        if (string.IsNullOrWhiteSpace(text))
+            return true;
+
+        var label = family == AddressFamily.InterNetwork ? "IPv4" : "IPv6";
+        var trimmed = text.Trim();
+        if (!IpMath.TryParseAddress(trimmed, out var parsed) || parsed.AddressFamily != family)
+        {
+            error = $"\"{trimmed}\" is not an {label} gateway address.";
+            return false;
+        }
+        if (parsed.Equals(IPAddress.Any) || parsed.Equals(IPAddress.IPv6Any)
+            || IPAddress.IsLoopback(parsed) || parsed.Equals(IPAddress.Broadcast))
+        {
+            error = $"{parsed} can't be a gateway.";
+            return false;
+        }
+
+        gateway = parsed;
+        return true;
     }
 
     public static string DisplayName(Rule rule) =>

@@ -2,6 +2,7 @@ using System.Net.Sockets;
 using RouteManager.App.Infrastructure;
 using RouteManager.Core.Model;
 using RouteManager.Core.Net;
+using RouteManager.Core.Steering;
 
 namespace RouteManager.App.ViewModels;
 
@@ -18,6 +19,9 @@ public sealed class RuleEditorViewModel : ObservableObject
     private string _matchesText;
     private InterfaceOption _ipv4;
     private InterfaceOption _ipv6;
+    private string _ipv4Gateway;
+    private string _ipv6Gateway;
+    private readonly IReadOnlyList<InterfaceInfo> _interfaces;
 
     public RuleEditorViewModel(Rule rule, IReadOnlyList<InterfaceInfo> interfaces, bool isNew)
     {
@@ -26,6 +30,9 @@ public sealed class RuleEditorViewModel : ObservableObject
         _name = rule.Name ?? "";
         _enabled = rule.Enabled;
         _matchesText = string.Join(Environment.NewLine, rule.Matches);
+        _ipv4Gateway = rule.Ipv4Gateway ?? "";
+        _ipv6Gateway = rule.Ipv6Gateway ?? "";
+        _interfaces = interfaces;
 
         Ipv4Options = BuildOptions(interfaces, AddressFamily.InterNetwork, rule.Ipv4Interface);
         Ipv6Options = BuildOptions(interfaces, AddressFamily.InterNetworkV6, rule.Ipv6Interface);
@@ -80,6 +87,28 @@ public sealed class RuleEditorViewModel : ObservableObject
         }
     }
 
+    /// <summary>Optional next hop for IPv4 routes; blank means automatic (interface gateway or on-link).</summary>
+    public string Ipv4Gateway
+    {
+        get => _ipv4Gateway;
+        set
+        {
+            if (SetProperty(ref _ipv4Gateway, value))
+                Validate();
+        }
+    }
+
+    /// <summary>Optional next hop for IPv6 routes; blank means automatic.</summary>
+    public string Ipv6Gateway
+    {
+        get => _ipv6Gateway;
+        set
+        {
+            if (SetProperty(ref _ipv6Gateway, value))
+                Validate();
+        }
+    }
+
     public string ValidationText { get; private set; } = "";
     public bool HasErrors { get; private set; }
     public bool HasWarnings { get; private set; }
@@ -92,6 +121,8 @@ public sealed class RuleEditorViewModel : ObservableObject
         _rule.Matches = Lines().ToList();
         _rule.Ipv4Interface = SelectedIpv4.Ref;
         _rule.Ipv6Interface = SelectedIpv6.Ref;
+        _rule.Ipv4Gateway = string.IsNullOrWhiteSpace(Ipv4Gateway) ? null : Ipv4Gateway.Trim();
+        _rule.Ipv6Gateway = string.IsNullOrWhiteSpace(Ipv6Gateway) ? null : Ipv6Gateway.Trim();
         return _rule;
     }
 
@@ -121,6 +152,8 @@ public sealed class RuleEditorViewModel : ObservableObject
             warnings.Add("IPv4 destinations won't be routed until you choose an IPv4 interface.");
         if (v6.Count > 0 && SelectedIpv6.Ref is null)
             warnings.Add("IPv6 destinations won't be routed until you choose an IPv6 interface.");
+        CheckGateway(Ipv4Gateway, AddressFamily.InterNetwork, SelectedIpv4, errors, warnings);
+        CheckGateway(Ipv6Gateway, AddressFamily.InterNetworkV6, SelectedIpv6, errors, warnings);
 
         HasErrors = errors.Count > 0;
         HasWarnings = !HasErrors && warnings.Count > 0;
@@ -138,6 +171,24 @@ public sealed class RuleEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(ValidationText));
         OnPropertyChanged(nameof(HasErrors));
         OnPropertyChanged(nameof(HasWarnings));
+    }
+
+    private void CheckGateway(string text, AddressFamily family, InterfaceOption target, List<string> errors, List<string> warnings)
+    {
+        if (!RoutePlanner.TryParseGateway(text, family, out var gateway, out var error))
+        {
+            errors.Add(error!);
+            return;
+        }
+        if (gateway is null)
+            return;
+
+        var label = family == AddressFamily.InterNetwork ? "IPv4" : "IPv6";
+        if (target.Ref is null)
+            warnings.Add($"The {label} gateway is used only together with an {label} interface.");
+        // The interface may simply be disconnected right now, so this doesn't block saving; the rule shows why it's inactive.
+        else if (_interfaces.FirstOrDefault(i => i.Luid == target.Ref.Luid) is { } nic && nic.IsUp && !nic.IsOnSubnet(gateway))
+            warnings.Add($"Gateway {gateway} is not in a subnet of \"{nic.Name}\" right now.");
     }
 
     private static List<InterfaceOption> BuildOptions(IReadOnlyList<InterfaceInfo> interfaces, AddressFamily family, InterfaceRef? current)
